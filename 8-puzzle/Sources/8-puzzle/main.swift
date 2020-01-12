@@ -1,3 +1,5 @@
+import Foundation
+
 typealias Board = [[Int]]
 typealias Path = [Board]
 
@@ -40,34 +42,7 @@ extension BlankSpace {
 	}
 }
 
-struct Queue<T> {
-	var items:[T] = []
-
-	mutating func push(_ element: T) {
-		items.append(element)
-	}
-
-	mutating func pop() -> T? {
-		if items.isEmpty {
-			return nil
-		}
-		else {
-			let tempElement = items.first
-			items.remove(at: 0)
-			return tempElement
-		}
-	}
-
-	func peek() -> T? {
-		return items.first
-	}
-
-	func isEmpty() -> Bool {
-		return items.isEmpty
-	}
-}
-
-class TableNode {
+class TableNode: Equatable, Comparable {
 
 	let moveCount: Int
 	let path: Path
@@ -106,6 +81,14 @@ class TableNode {
 		}
 		return distanceSum
 	}
+    
+    static func ==(lhs: TableNode, rhs: TableNode) -> Bool {
+        return lhs.sum == rhs.sum
+    }
+    
+    static func < (lhs: TableNode, rhs: TableNode) -> Bool {
+        return lhs.sum < rhs.sum
+    }
 }
 
 class Puzzle {
@@ -119,9 +102,9 @@ class Puzzle {
 
     private func newState(blankSpace: BlankSpace, newTile: BlankSpace, board: Board) -> Board {
     	var newBoard = board
-    	var wtf = newBoard[blankSpace.x][blankSpace.y]
+    	let blankSpaceFromBoard = newBoard[blankSpace.x][blankSpace.y]
     	newBoard[blankSpace.x][blankSpace.y] = newBoard[newTile.x][newTile.y]
-    	newBoard[newTile.x][newTile.y] = wtf
+    	newBoard[newTile.x][newTile.y] = blankSpaceFromBoard
     	return newBoard 
     }
 
@@ -157,50 +140,22 @@ class Puzzle {
 		return BlankSpace(x: x, y: y)
     }
 
-    //   private fun MutableList<Board>.isNewState(element: Board): Boolean {
-    //     return !this.map { it.contentDeepEquals(element) }.contains(true)
-    // }
-
     func isBoardNewState(usedBoards: [Board], board: Board) -> Bool {
     	return !usedBoards.contains(board)
     }
 
-    //     fun solveWithAStar(): Pair<Int, Path> {
-    //     usedTables.clear()
-    //     val priorityQueue = PriorityQueue<TableNode>()
-    //     priorityQueue.addAndMarkAsPassed(TableNode(0, listOf<Board>(startMatrix), startMatrix, START_POINT))
-    //     while (priorityQueue.isNotEmpty()) {
-    //         val currentNode = priorityQueue.peek()
-    //         if (currentNode.currentState.manhattanDistance() == 0)
-    //             return Pair(currentNode.moves, currentNode.path)
-    //         priorityQueue.remove()
-    //         Direction.values().forEach { dir ->
-    //             val newTile = dir.nextTile(currentNode.blankTile)
-    //             if (newTile.isInBounds()) {
-    //                 val newBoard = currentNode.currentState.newState(currentNode.blankTile, newTile)
-    //                 if (usedTables.isNewState(newBoard)) {
-    //                     val path = currentNode.path.toMutableList()
-    //                     path.add(newBoard)
-    //                     priorityQueue.addAndMarkAsPassed(TableNode((currentNode.moves + 1), path, newBoard, newTile))
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     return Pair(0, mutableListOf())
-    // }
-
     func solveWithAStar() -> (Int, Path) {
     	usedTables.removeAll()
-		var queue = Queue<TableNode>()
-		var startTableNode = TableNode()
+        var queue = PriorityQueue<TableNode>(sort: <)
+        let startTableNode = TableNode()
 		usedTables.append(startTableNode.currentState)
-		queue.push(startTableNode)
-        while (!queue.isEmpty()) {
+		queue.enqueue(startTableNode)
+        while (!queue.isEmpty) {
         	let currentNode = queue.peek()! // Not good unwrapping tho
         	if currentNode.manhattanDistance() == 0 {
         		return (currentNode.moveCount, currentNode.path)
         	}
-        	queue.pop()
+        	queue.dequeue()
         	Direction.allCases.forEach {
         		let newBlankSpace = nextBlackSpcae(point: currentNode.blankSpace, direction: $0)
         		if newBlankSpace.inBounds {
@@ -208,29 +163,25 @@ class Puzzle {
         			if (!usedTables.contains(newBoard)) {
         				var path = currentNode.path
         				path.append(newBoard)
+                        print("Move Count: \(currentNode.moveCount)")
         				let newTableNode = TableNode(moveCount: currentNode.moveCount + 1, path: path, board: newBoard, blankSpace: newBlankSpace)
 						usedTables.append(newTableNode.currentState)
-						queue.push(newTableNode)
+						queue.enqueue(newTableNode)
 					}
         		}
         	}
         }
         return (0, [])
     }
-
-    //     fun printSolution(solution: Pair<Int, Path>) {
-    //     println("Number of steps: ${solution.first}")
-    //     solution.second.forEach {
-    //         println(Arrays.deepToString(it).replace("],", "],\n"))
-    //         println("-----------")
-    //         Thread.sleep(2_000)
-    //     }
-    // }
-
+    
     func printSolution(_ solution: (steps: Int, path: Path)) {
     	print("Steps: \(solution.steps)\n")
     	solution.path.forEach {
-    		print($0)
+            $0.forEach { tripple in
+                print(tripple)
+            }
+            print("\n")
+            Thread.sleep(forTimeInterval: 2)
     	}
     }
 }
